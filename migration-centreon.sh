@@ -162,10 +162,10 @@ from sauvegarde_bases
 where uname='`uname -n`' and application='centreon' ;
 EOF
 
-mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-user.txt
+mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-user-local.txt
 
-lecture_user=$(sed '$!d' /tmp/lecture-user.txt)
-rm -f /tmp/lecture-user.txt
+lecture_user_local=$(sed '$!d' /tmp/lecture-user-local.txt)
+rm -f /tmp/lecture-user-local.txt
 rm -f $fichtemp
 
 cat <<- EOF > $fichtemp
@@ -174,10 +174,34 @@ from sauvegarde_bases
 where uname='`uname -n`' and application='centreon' ;
 EOF
 
-mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-password.txt
+mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-password-local.txt
 
-lecture_password=$(sed '$!d' /tmp/lecture-password.txt)
-rm -f /tmp/lecture-password.txt
+lecture_password_local=$(sed '$!d' /tmp/lecture-password-local.txt)
+rm -f /tmp/lecture-password-local.txt
+rm -f $fichtemp
+
+cat <<- EOF > $fichtemp
+select user
+from sauvegarde_bases
+where uname='`uname -n`' and application='centreon' ;
+EOF
+
+mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-user-distant.txt
+
+lecture_user_distant=$(sed '$!d' /tmp/lecture-user-distant.txt)
+rm -f /tmp/lecture-user-distant.txt
+rm -f $fichtemp
+
+cat <<- EOF > $fichtemp
+select password
+from sauvegarde_bases
+where uname='`uname -n`' and application='centreon' ;
+EOF
+
+mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-password-distant.txt
+
+lecture_password_distant=$(sed '$!d' /tmp/lecture-password-distant.txt)
+rm -f /tmp/lecture-password-distant.txt
 rm -f $fichtemp
 
 
@@ -198,11 +222,13 @@ rm -f /tmp/lecture-bases-sauvegarder.txt
 rm -f $fichtemp
 
 
-REF20=$lecture_user
-REF21=$lecture_password
-REF22=$lecture_bases_no1
-REF23=$lecture_bases_no2
-REF24=$lecture_bases_no3
+REF20=$lecture_user_local
+REF21=$lecture_password_local
+REF22=$lecture_user_distant
+REF23=$lecture_password_distant
+REF24=$lecture_bases_no1
+REF25=$lecture_bases_no2
+REF26=$lecture_bases_no3
 
 }
 
@@ -658,14 +684,58 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 (
  echo "10" ; sleep 1
-) |
-$DIALOG  --backtitle "Configuration Migration Centreon" \
-	  --title "Configuration Migration Centreon" \
-	  --gauge "Migration en cours veuillez patienter" 10 62 0 \
+ echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
+
+	cat <<- EOF > migration.sh
+	if [ -d /usr/local/nagios/libexec ] ; then
+	PLUGINS=/usr/local/nagios/libexec
+	fi
+
+	if [ -d /usr/local/centreon-plugins/libexec ] ; then
+	PLUGINS=/usr/local/centreon-plugins/libexec
+	fi
+
+	mkdir -p /root/dump-mysql/
+	mkdir -p /root/dump-rrd/
+	mkdir -p /root/dump-rrd/metrics
+	mkdir -p /root/dump-rrd/nagios-perf
+	mkdir -p /root/dump-rrd/nagios-perf/perfmon-1
+	mkdir -p /root/dump-rrd/status
+
+	cd /var/lib/centreon/metrics
+	for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/metrics/\$i.xml; done
+
+	cd /var/lib/centreon/nagios-perf/perfmon-1
+	for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/nagios-perf/perfmon-1/\$i.xml; done
+
+	cd /var/lib/centreon/status
+	for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/status/\$i.xml; done
 
 
-(
+	cd /root
+
+	mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF24 --databases > /root/dump-mysql/$REF24.sql
+
+	tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /etc/centreon/ dump-rrd/ -P
+
+	rm -rf dump-mysql/
+	rm -rf dump-rrd/
+	EOF
+
+
  echo "20" ; sleep 1
+ echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
+
+
+	#sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p  migration.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
+	#sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 migration.sh" &> /dev/null
+	#sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./migration.sh" &> /dev/null
+
+
+	#rm -f migration.sh
+
+
+ echo "30" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 	if [ -f $NagiosLockFile ] ; then
