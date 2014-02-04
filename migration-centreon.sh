@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 02-02-2014
+# Date : 04-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -360,15 +360,15 @@ verification_couleur
 fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 
-$DIALOG  --backtitle "Configuration Migration Centreon" \
-	  --title "Configuration Migration Centreon" \
-	  --clear \
-	  --colors \
-	  --default-item "3" \
-	  --menu "Quel est votre choix" 12 60 4 \
-	  "1" "$choix1" \
-	  "2" "Configuration Migration Centreon" \
-	  "3" "Quitter" 2> $fichtemp
+$DIALOG --backtitle "Configuration Migration Centreon" \
+	 --title "Configuration Migration Centreon" \
+	 --clear \
+	 --colors \
+	 --default-item "3" \
+	 --menu "Quel est votre choix" 12 60 4 \
+	 "1" "$choix1" \
+	 "2" "Configuration Migration Centreon" \
+	 "3" "Quitter" 2> $fichtemp
 
 
 valret=$?
@@ -432,15 +432,15 @@ lecture_config_centraliser_sauvegarde
 fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 
-$DIALOG  --backtitle "Configuration Migration Centreon" \
-	  --insecure \
-	  --title "Gestion Centraliser des Sauvegardes" \
-	  --mixedform "Quel est votre choix" 12 60 0 \
-	  "Nom Serveur:"     1 1  "$REF10"  1 20  30 28 0  \
-	  "Port Serveur:"    2 1  "$REF11"  2 20  30 28 0  \
-	  "Base de Donnees:" 3 1  "$REF12"  3 20  30 28 0  \
-	  "Compte Root:"     4 1  "$REF13"  4 20  30 28 0  \
-	  "Password Root:"   5 1  "$REF14"  5 20  30 28 1  2> $fichtemp
+$DIALOG --backtitle "Configuration Migration Centreon" \
+	 --insecure \
+	 --title "Gestion Centraliser des Sauvegardes" \
+	 --mixedform "Quel est votre choix" 12 60 0 \
+	 "Nom Serveur:"     1 1  "$REF10"  1 20  30 28 0  \
+	 "Port Serveur:"    2 1  "$REF11"  2 20  30 28 0  \
+	 "Base de Donnees:" 3 1  "$REF12"  3 20  30 28 0  \
+	 "Compte Root:"     4 1  "$REF13"  4 20  30 28 0  \
+	 "Password Root:"   5 1  "$REF14"  5 20  30 28 1  2> $fichtemp
 
 
 valret=$?
@@ -506,10 +506,10 @@ menu_choix_serveur()
 fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 
-$DIALOG  --backtitle "Configuration Migration Centreon" \
-	  --title "Configuration Migration Centreon" \
-	  --form "Quel est votre choix" 8 50 1 \
-	  "Migration Serveur:"  1 1  "`uname -n`"   1 20 20 0  2> $fichtemp
+$DIALOG --backtitle "Configuration Migration Centreon" \
+	 --title "Configuration Migration Centreon" \
+	 --form "Quel est votre choix" 8 50 1 \
+	 "Migration Serveur:"  1 1  "`uname -n`"   1 20 20 0  2> $fichtemp
 
 
 valret=$?
@@ -611,14 +611,14 @@ lecture_valeurs_base_donnees
 fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 
-$DIALOG  --backtitle "Configuration Migration Centreon" \
-	  --insecure \
-	  --title "Connexion Serveur SSH Distant" \
-	  --mixedform "Quel est votre choix" 11 60 0 \
-	  "Nom Serveur:"   1 1  "$choix_serveur"  1 20  30 28 0  \
-	  "Port Serveur:"  2 1  "22"              2 20  30 28 0  \
-	  "Compte Root:"   3 1  "root"            3 20  30 28 0  \
-	  "Password Root:" 4 1  ""                4 20  30 28 1  2> $fichtemp
+$DIALOG --backtitle "Configuration Migration Centreon" \
+	 --insecure \
+	 --title "Connexion Serveur SSH Distant" \
+	 --mixedform "Quel est votre choix" 11 60 0 \
+	 "Nom Serveur:"   1 1  "$choix_serveur"  1 20  30 28 0  \
+	 "Port Serveur:"  2 1  "22"              2 20  30 28 0  \
+	 "Compte Root:"   3 1  "root"            3 20  30 28 0  \
+	 "Password Root:" 4 1  ""                4 20  30 28 1  2> $fichtemp
 
 
 valret=$?
@@ -688,11 +688,11 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 	cat <<- EOF > migration.sh
 	if [ -d /usr/local/nagios/libexec ] ; then
-	PLUGINS=/usr/local/nagios/libexec
+		PLUGINS=/usr/local/nagios/libexec
 	fi
 
 	if [ -d /usr/local/centreon-plugins/libexec ] ; then
-	PLUGINS=/usr/local/centreon-plugins/libexec
+		PLUGINS=/usr/local/centreon-plugins/libexec
 	fi
 
 	mkdir -p /root/dump-mysql/
@@ -806,9 +806,9 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
  echo "XXX" ; echo "Terminer"; echo "XXX"
  sleep 2
 ) |
-$DIALOG  --backtitle "Configuration Migration Centreon" \
-	  --title "Configuration Migration Centreon" \
-	  --gauge "Migration en cours veuillez patienter" 10 62 0 \
+$DIALOG --backtitle "Configuration Migration Centreon" \
+	 --title "Configuration Migration Centreon" \
+	 --gauge "Migration en cours veuillez patienter" 10 62 0 \
 
 }
 
