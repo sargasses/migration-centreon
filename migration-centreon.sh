@@ -649,7 +649,7 @@ case $valret in
 		if grep -w "$choix_serveur" /tmp/hostname > /dev/null ; then
 			rm -f /tmp/hostname
 			rm -f $fichtemp
-			migration_serveur_centreon
+			fonction_verification_plateforme_serveur_distant
 		else
 			rm -f /tmp/hostname
 			rm -f $fichtemp
@@ -678,6 +678,23 @@ esac
 rm -f $fichtemp
 
 menu
+
+}
+
+#############################################################################
+# Fonction Verification Plateforme 32 bits ou 64 bits Serveur Distant
+#############################################################################
+
+fonction_verification_plateforme_serveur_distant()
+{
+
+if [ -d /lib64 ] ; then
+	PLATEFORME_DISTANT=64
+else
+	PLATEFORME_DISTANT=32
+fi
+
+
 
 }
 
