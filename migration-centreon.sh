@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 04-02-2014
+# Date : 10-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -314,7 +314,7 @@ message_erreur_ssh()
 cat <<- EOF > /tmp/erreur
 Veuillez vous assurer que les parametres saisie
       pour la connexion au serveur en ssh    
-                 sont correcte
+                sont correcte
 EOF
 
 erreur=`cat /tmp/erreur`
@@ -508,8 +508,8 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 $DIALOG --backtitle "Configuration Migration Centreon" \
 	 --title "Configuration Migration Centreon" \
-	 --form "Quel est votre choix" 8 50 1 \
-	 "Migration Serveur:"  1 1  "`uname -n`"   1 20 20 0  2> $fichtemp
+	 --form "Quel est votre choix" 9 60 1 \
+	 "Migration Serveur:"  1 1  "`uname -n`" 1 20 34 18 2> $fichtemp
 
 
 valret=$?
@@ -580,7 +580,6 @@ case $valret in
 		fi
 
 	fi
-
 	;;
 
  1)	# Appuyé sur Touche CTRL C
@@ -631,8 +630,19 @@ case $valret in
 	VARSAISI22=$(sed -n 3p $fichtemp)
 	VARSAISI23=$(sed -n 4p $fichtemp)
 
-	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "exit" &> /dev/null
-	sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p $VARSAISI22@$VARSAISI20:/etc/hostname /tmp/ &> /dev/null
+	nmap --unprivileged $VARSAISI20 -p $VARSAISI21 > /tmp/nmap.txt 
+
+	if ! grep -w "open" /tmp/nmap.txt > /dev/null ; then
+		rm -f /tmp/nmap.txt
+		rm -f $fichtemp
+		message_erreur_ssh
+		menu
+	else
+		rm -f /tmp/nmap.txt
+		sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "exit" &> /dev/null
+		sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p $VARSAISI22@$VARSAISI20:/etc/hostname /tmp/ &> /dev/null
+	fi
+
 
 	if [ -f /tmp/hostname ] ; then
 
@@ -653,7 +663,6 @@ case $valret in
 		message_erreur_ssh
 		menu
 	fi
-
 	;;
 
  1)	# Appuyé sur Touche CTRL C
