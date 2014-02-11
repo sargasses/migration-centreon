@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 10-02-2014
+# Date : 11-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -640,7 +640,7 @@ case $valret in
 	else
 		rm -f /tmp/nmap.txt
 		sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "exit" &> /dev/null
-		sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p $VARSAISI22@$VARSAISI20:/etc/hostname /tmp/ &> /dev/null
+		sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/etc/hostname /tmp/ &> /dev/null
 	fi
 
 
@@ -688,13 +688,62 @@ menu
 fonction_verification_plateforme_serveur_distant()
 {
 
+cat <<- EOF > plateforme.sh
 if [ -d /lib64 ] ; then
-	PLATEFORME_DISTANT=64
+       PLATEFORME_DISTANT=64
 else
-	PLATEFORME_DISTANT=32
+       PLATEFORME_DISTANT=32
 fi
 
+echo "\$PLATEFORME_DISTANT" > plateforme-distant.txt
+EOF
 
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 plateforme.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 plateforme.sh" &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./plateforme.sh" &> /dev/null
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/root/plateforme-distant.txt /root/ &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/plateforme.sh ; rm -f /root/plateforme-distant.txt" &> /dev/null
+
+
+PLATEFORME_DISTANT=`cat plateforme-distant.txt`
+
+rm -f plateforme.sh
+rm -f plateforme-distant.txt
+echo "Plateforme distante: $PLATEFORME_DISTANT"		
+
+#fonction_verification_engine_serveur_distant
+
+}
+
+#############################################################################
+# Fonction Verification Engine Serveur Distant
+#############################################################################
+
+fonction_verification_engine_serveur_distant()
+{
+
+cat <<- EOF > plateforme.sh
+if [ -d /lib64 ] ; then
+       PLATEFORME_DISTANT=64
+else
+       PLATEFORME_DISTANT=32
+fi
+
+echo "\$PLATEFORME_DISTANT" > plateforme-distant.txt
+EOF
+
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 plateforme.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 plateforme.sh" &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./plateforme.sh" &> /dev/null
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/root/plateforme-distant.txt /root/ &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/plateforme.sh ; rm -f /root/plateforme-distant.txt" &> /dev/null
+
+
+PLATEFORME_DISTANT=`cat plateforme-distant.txt`
+
+rm -f plateforme.sh
+rm -f plateforme-distant.txt
+echo "Plateforme distante: $PLATEFORME_DISTANT"		
 
 }
 
