@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 11-02-2014
+# Date : 12-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -711,7 +711,7 @@ rm -f plateforme.sh
 rm -f plateforme-distant.txt
 echo "Plateforme distante: $PLATEFORME_DISTANT"		
 
-#fonction_verification_engine_serveur_distant
+fonction_verification_engine_serveur_distant
 
 }
 
@@ -722,30 +722,35 @@ echo "Plateforme distante: $PLATEFORME_DISTANT"
 fonction_verification_engine_serveur_distant()
 {
 
-cat <<- EOF > plateforme.sh
-if [ -d /lib64 ] ; then
-       PLATEFORME_DISTANT=64
-else
-       PLATEFORME_DISTANT=32
+cat <<- EOF > engine.sh
+fichtemp=\`tempfile 2>/dev/null\` || fichtemp=/tmp/test\$$
+
+if [ -f /etc/centreon/instCentWeb.conf ] ; then
+       grep "^MONITORINGENGINE_ETC=" /etc/centreon/instCentWeb.conf  > \$fichtemp
+       sed -i "s/MONITORINGENGINE_ETC=//g" \$fichtemp
+       ENGINE_DISTANT=\`cat \$fichtemp\` 
 fi
 
-echo "\$PLATEFORME_DISTANT" > plateforme-distant.txt
+echo "\$ENGINE_DISTANT" > engine-distant.txt
 EOF
 
-sshpass -p $VARSAISI23 scp -P $VARSAISI21 plateforme.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
-sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 plateforme.sh" &> /dev/null
-sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./plateforme.sh" &> /dev/null
-sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/root/plateforme-distant.txt /root/ &> /dev/null
-sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/plateforme.sh ; rm -f /root/plateforme-distant.txt" &> /dev/null
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 engine.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 engine.sh" &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./engine.sh" &> /dev/null
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/root/engine-distant.txt /root/ &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/engine.sh ; rm -f /root/engine-distant.txt" &> /dev/null
 
 
-PLATEFORME_DISTANT=`cat plateforme-distant.txt`
+ENGINE_DISTANT=`cat engine-distant.txt`
 
-rm -f plateforme.sh
-rm -f plateforme-distant.txt
-echo "Plateforme distante: $PLATEFORME_DISTANT"		
+rm -f engine.sh
+rm -f engine-distant.txt
+echo "Engine distant: $ENGINE_DISTANT"		
+
+migration_serveur_centreon
 
 }
+
 
 #############################################################################
 # Fonction Migration Serveur Centreon
@@ -761,42 +766,72 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
  echo "10" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
-	cat <<- EOF > migration.sh
-	if [ -d /usr/local/nagios/libexec ] ; then
-		PLUGINS=/usr/local/nagios/libexec
+	if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
+
+		cat <<- EOF > migration.sh
+		if [ -d /usr/local/nagios/libexec ] ; then
+                     PLUGINS=/usr/local/nagios/libexec
+		fi
+
+		if [ -d /usr/local/centreon-plugins/libexec ] ; then
+                     PLUGINS=/usr/local/centreon-plugins/libexec
+		fi
+
+		mkdir -p /root/dump-mysql/
+		mkdir -p /root/dump-rrd/
+		mkdir -p /root/dump-rrd/metrics
+		mkdir -p /root/dump-rrd/nagios-perf
+		mkdir -p /root/dump-rrd/nagios-perf/perfmon-1
+		mkdir -p /root/dump-rrd/status
+
+		cd /var/lib/centreon/metrics
+		for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/metrics/\$i.xml; done
+
+		cd /var/lib/centreon/nagios-perf/perfmon-1
+		for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/nagios-perf/perfmon-1/\$i.xml; done
+
+		cd /var/lib/centreon/status
+		for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/status/\$i.xml; done
+
+
+		cd /root
+
+		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF24 --databases > /root/dump-mysql/$REF24.sql
+		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF25 --databases > /root/dump-mysql/$REF25.sql
+		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF26 --databases > /root/dump-mysql/$REF26.sql
+
+		tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /etc/centreon/ dump-rrd/ dump-mysql/ -P
+
+		rm -rf dump-mysql/
+		rm -rf dump-rrd/
+		EOF
+
+	else
+
+		cat <<- EOF > migration.sh
+		if [ -d /usr/local/nagios/libexec ] ; then
+                     PLUGINS=/usr/local/nagios/libexec
+		fi
+
+		if [ -d /usr/local/centreon-plugins/libexec ] ; then
+                     PLUGINS=/usr/local/centreon-plugins/libexec
+		fi
+
+		mkdir -p /root/dump-mysql/
+	
+
+		cd /root
+
+		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF24 --databases > /root/dump-mysql/$REF24.sql
+		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF25 --databases > /root/dump-mysql/$REF25.sql
+		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF26 --databases > /root/dump-mysql/$REF26.sql
+
+		tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /var/lib/centreon/ /etc/centreon/ dump-mysql/ -P
+
+		rm -rf dump-mysql/
+		EOF
+
 	fi
-
-	if [ -d /usr/local/centreon-plugins/libexec ] ; then
-		PLUGINS=/usr/local/centreon-plugins/libexec
-	fi
-
-	mkdir -p /root/dump-mysql/
-	mkdir -p /root/dump-rrd/
-	mkdir -p /root/dump-rrd/metrics
-	mkdir -p /root/dump-rrd/nagios-perf
-	mkdir -p /root/dump-rrd/nagios-perf/perfmon-1
-	mkdir -p /root/dump-rrd/status
-
-	cd /var/lib/centreon/metrics
-	for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/metrics/\$i.xml; done
-
-	cd /var/lib/centreon/nagios-perf/perfmon-1
-	for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/nagios-perf/perfmon-1/\$i.xml; done
-
-	cd /var/lib/centreon/status
-	for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/status/\$i.xml; done
-
-
-	cd /root
-
-	mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF24 --databases > /root/dump-mysql/$REF24.sql
-
-	tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /etc/centreon/ dump-rrd/ -P
-
-	rm -rf dump-mysql/
-	rm -rf dump-rrd/
-	EOF
-
 
  echo "20" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
