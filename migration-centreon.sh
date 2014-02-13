@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 12-02-2014
+# Date : 13-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -183,7 +183,7 @@ rm -f $fichtemp
 cat <<- EOF > $fichtemp
 select user
 from sauvegarde_bases
-where uname='`uname -n`' and application='centreon' ;
+where uname='$choix_serveur' and application='centreon' ;
 EOF
 
 mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-user-distant.txt
@@ -195,7 +195,7 @@ rm -f $fichtemp
 cat <<- EOF > $fichtemp
 select password
 from sauvegarde_bases
-where uname='`uname -n`' and application='centreon' ;
+where uname='$choix_serveur' and application='centreon' ;
 EOF
 
 mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-password-distant.txt
@@ -766,15 +766,20 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
  echo "10" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
+
+
+ echo "20" ; sleep 1
+ echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
+
 	if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
 
 		cat <<- EOF > migration.sh
 		if [ -d /usr/local/nagios/libexec ] ; then
-                     PLUGINS=/usr/local/nagios/libexec
+		       PLUGINS=/usr/local/nagios/libexec
 		fi
 
 		if [ -d /usr/local/centreon-plugins/libexec ] ; then
-                     PLUGINS=/usr/local/centreon-plugins/libexec
+		       PLUGINS=/usr/local/centreon-plugins/libexec
 		fi
 
 		mkdir -p /root/dump-mysql/
@@ -810,11 +815,11 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 		cat <<- EOF > migration.sh
 		if [ -d /usr/local/nagios/libexec ] ; then
-                     PLUGINS=/usr/local/nagios/libexec
+		       PLUGINS=/usr/local/nagios/libexec
 		fi
 
 		if [ -d /usr/local/centreon-plugins/libexec ] ; then
-                     PLUGINS=/usr/local/centreon-plugins/libexec
+		       PLUGINS=/usr/local/centreon-plugins/libexec
 		fi
 
 		mkdir -p /root/dump-mysql/
@@ -833,19 +838,20 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 	fi
 
- echo "20" ; sleep 1
+ echo "30" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 
-	#sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p  migration.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
-	#sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 migration.sh" &> /dev/null
-	#sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./migration.sh" &> /dev/null
+	sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p  migration.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 migration.sh" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./migration.sh" &> /dev/null
+	sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/root/migration-centreon.tgz /root/ &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration.sh ; rm -f /root/migration-centreon.tgz" &> /dev/null
+
+	rm -f migration.sh
 
 
-	#rm -f migration.sh
-
-
- echo "30" ; sleep 1
+ echo "40" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 	if [ -f $NagiosLockFile ] ; then
@@ -872,20 +878,92 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 	/etc/init.d/centstorage stop &> /dev/null
 	fi
 
- echo "30" ; sleep 1
+ echo "50" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 	
+	rm -rf /etc/centreon/
+	rm -rf /usr/local/centreon/www/img/media/
+	rm -rf /var/lib/centreon/
+
+	if [ -d /usr/local/nagios/libexec ] ; then
+	rm -rf /usr/local/nagios/libexec/
+	fi
+
+	if [ -d /usr/local/centreon-plugins/libexec ] ; then
+	rm -rf /usr/local/centreon-plugins/libexec/
+	fi
+
+
+	cp -Rp etc/centreon/ /etc/
+	cp -Rp usr/local/centreon/www/img/media/ /usr/local/centreon/www/img/
+	cp -Rp var/lib/centreon/ /var/lib/
+
+	if [ -d usr/local/nagios/libexec ] ; then
+	cp -Rp usr/local/nagios/libexec/ /usr/local/nagios/ 
+	fi
+
+	if [ -d usr/local/centreon-plugins/libexec ] ; then
+	cp -Rp usr/local/centreon-plugins/libexec/ /usr/local/centreon-plugins/
+	fi
+
+
+	chown -R centreon:centreon  /var/lib/centreon
+	chmod -R 775 /var/lib/centreon
 
  echo "60" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 
+	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < /root/dump-mysql/$VARSAISI23.sql
+	
+	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < /root/dump-mysql/$VARSAISI24.sql
 
+	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < /root/dump-mysql/$VARSAISI25.sql
+
+
+	cat <<- EOF > $fichtemp
+	CREATE USER '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' IDENTIFIED BY '$lecture_password_centreon_distant';
+	EOF
+
+	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+	rm -f $fichtemp
+
+
+	cat <<- EOF > $fichtemp
+	GRANT ALL PRIVILEGES ON $VARSAISI23 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
+	EOF
+
+	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+	rm -f $fichtemp
+
+
+	cat <<- EOF > $fichtemp
+	GRANT ALL PRIVILEGES ON $VARSAISI24 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
+	EOF
+
+	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+	rm -f $fichtemp
+
+
+	cat <<- EOF > $fichtemp
+	GRANT ALL PRIVILEGES ON $VARSAISI25 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
+	EOF
+
+	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+	rm -f $fichtemp
 
  echo "80" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
-	
+	rm -rf etc/
+	rm -rf usr/
+	rm -rf var/
+	rm -rf dump-mysql/
+	rm -rf plateforme/
 
  echo "90" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
