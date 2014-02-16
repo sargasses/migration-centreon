@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 13-02-2014
+# Date : 16-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -330,6 +330,54 @@ rm -f /tmp/erreur
 }
 
 #############################################################################
+# Fonction Message d'erreur migration
+#############################################################################
+
+message_erreur_migration()
+{
+	
+cat <<- EOF > /tmp/erreur
+Veuillez vous assurer que le nom du serveur a migrer
+                ne soit pas lui meme
+EOF
+
+erreur=`cat /tmp/erreur`
+
+$DIALOG --ok-label "Quitter" \
+	 --colors \
+	 --backtitle "Configuration Migration Centreon" \
+	 --title "Erreur" \
+	 --msgbox  "\Z1$erreur\Zn" 6 56 
+
+rm -f /tmp/erreur
+
+}
+
+#############################################################################
+# Fonction Message d'erreur fichier
+#############################################################################
+
+message_erreur_fichier()
+{
+	
+cat <<- EOF > /tmp/erreur
+Le fichier *.tgz n'est pas present sur le serveur 
+      la migration n'est donc pas possible
+EOF
+
+erreur=`cat /tmp/erreur`
+
+$DIALOG --ok-label "Quitter" \
+	 --colors \
+	 --backtitle "Configuration Migration Centreon" \
+	 --title "Erreur" \
+	 --msgbox  "\Z1$erreur\Zn" 6 54 
+
+rm -f /tmp/erreur
+
+}
+
+#############################################################################
 # Fonction Verification Couleur
 #############################################################################
 
@@ -558,27 +606,8 @@ case $valret in
 		fi	
 
 	else
-
-		cat <<- EOF > $fichtemp
-		select uname
-		from information
-		where uname='`uname -n`' and application='centreon' ;
-		EOF
-
-		mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp > /tmp/lecture-serveur-local.txt
-
-		lecture_serveur_local=$(sed '$!d' /tmp/lecture-serveur-local.txt)
-
-		if grep -w "^`uname -n`" /tmp/lecture-serveur-local.txt > /dev/null ; then
-			rm -f /tmp/lecture-serveur-local.txt
-			rm -f $fichtemp
-			menu_configuration_migration_centreon
-		else
-			rm -f /tmp/lecture-serveur-local.txt
-			rm -f $fichtemp
-			message_erreur_sauvegarde
-		fi
-
+		rm -f $fichtemp
+		message_erreur_migration
 	fi
 	;;
 
@@ -747,7 +776,66 @@ rm -f engine.sh
 rm -f engine-distant.txt
 echo "Engine distant: $ENGINE_DISTANT"		
 
-migration_serveur_centreon
+menu_confirmation_migration_centreon
+
+}
+
+#############################################################################
+# Fonction Menu Confirmation Migration Centreon
+#############################################################################
+
+menu_confirmation_migration_centreon()
+{
+
+lecture_valeurs_base_donnees
+
+fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
+
+
+$DIALOG --backtitle "Configuration Migration Centreon" \
+	 --colors \
+	 --title "Confirmation Migration Centreon" \
+	 --menu "Quel est votre choix" 7 60 0 \
+	 "Utilisateur de la Base Local:"   "\Z2$REF20\Zn" \
+	 "Password de la Base Local:"      "\Z2$REF21\Zn" \
+	 "Utilisateur de la Base Distant:" "\Z2$REF22\Zn" \
+	 "Password de la Base Distant:"    "\Z2$REF23\Zn" \
+	 "Nom de la Base:"                 "\Z2$REF24\Zn" \
+	 "Nom de la Base:"                 "\Z2$REF25\Zn" \
+	 "Nom de la Base:"                 "\Z2$REF26\Zn" 2> $fichtemp
+
+
+valret=$?
+choix=`cat $fichtemp`
+case $valret in
+
+ 0)	# Confirmation Migration Centreon (Oui)
+	VARSAISI30=$REF20
+	VARSAISI31=$REF21
+	VARSAISI32=$REF22
+	VARSAISI33=$REF23
+	VARSAISI34=$REF24
+	VARSAISI35=$REF25
+	VARSAISI36=$REF26
+
+	rm -f $fichtemp
+	migration_serveur_centreon
+	;;
+
+
+ 1)	# Confirmation Migration Centreon (Non)
+	echo "Appuyé sur Touche (Non)"
+	;;
+
+ 255)	# Appuyé sur Touche Echap
+	echo "Appuyé sur Touche Echap."
+	;;
+
+esac
+
+rm -f $fichtemp
+
+menu
 
 }
 
@@ -764,11 +852,6 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 (
  echo "10" ; sleep 1
- echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
-
-
-
- echo "20" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 	if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
@@ -801,9 +884,9 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 		cd /root
 
-		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF24 --databases > /root/dump-mysql/$REF24.sql
-		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF25 --databases > /root/dump-mysql/$REF25.sql
-		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF26 --databases > /root/dump-mysql/$REF26.sql
+		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI34 --databases > /root/dump-mysql/$VARSAISI34.sql
+		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI35 --databases > /root/dump-mysql/$VARSAISI35.sql
+		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI36 --databases > /root/dump-mysql/$VARSAISI36.sql
 
 		tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /etc/centreon/ dump-rrd/ dump-mysql/ -P
 
@@ -827,9 +910,9 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 		cd /root
 
-		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF24 --databases > /root/dump-mysql/$REF24.sql
-		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF25 --databases > /root/dump-mysql/$REF25.sql
-		mysqldump -h \`uname -n\` -u $REF22 -p$REF23 $REF26 --databases > /root/dump-mysql/$REF26.sql
+		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI34 --databases > /root/dump-mysql/$VARSAISI34.sql
+		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI35 --databases > /root/dump-mysql/$VARSAISI35.sql
+		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI36 --databases > /root/dump-mysql/$VARSAISI36.sql
 
 		tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /var/lib/centreon/ /etc/centreon/ dump-mysql/ -P
 
@@ -838,7 +921,7 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 	fi
 
- echo "30" ; sleep 1
+ echo "20" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 
@@ -850,8 +933,179 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 	rm -f migration.sh
 
+) |
+$DIALOG --backtitle "Configuration Migration Centreon" \
+	 --title "Configuration Migration Centreon" \
+	 --gauge "Migration en cours veuillez patienter" 10 62 0 \
 
+
+(
+ echo "30" ; sleep 1
+) |
+$DIALOG --backtitle "Configuration Migration Centreon" \
+	 --title "Configuration Migration Centreon" \
+	 --gauge "Migration en cours veuillez patienter" 10 62 0 \
+
+	
+	if [ -f migration-centreon.tgz ] ; then
+		tar xvzf migration-centreon.tgz &> /dev/null
+	else
+		message_erreur_fichier
+		menu
+	fi
+
+(
  echo "40" ; sleep 1
+ echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
+
+	grep "hostCentreon" /etc/centreon/centreon.conf.php > $fichtemp
+	sed -n 's/.* =\ \(.*\);.*/\1/ip' $fichtemp > /tmp/lecture-serveur-centreon-local.txt 
+	sed -i 's/\"//g' /tmp/lecture-serveur-centreon-local.txt
+	lecture_serveur_centreon_local=`cat /tmp/lecture-serveur-centreon-local.txt`
+	rm -f /tmp/lecture-serveur-centreon-local.txt
+	rm -f $fichtemp
+
+	grep "user" /etc/centreon/centreon.conf.php > $fichtemp
+	sed -n 's/.* =\ \(.*\);.*/\1/ip' $fichtemp > /tmp/lecture-utilisateur-centreon-local.txt 
+	sed -i 's/\"//g' /tmp/lecture-utilisateur-centreon-local.txt
+	lecture_utilisateur_centreon_local=`cat /tmp/lecture-utilisateur-centreon-local.txt`
+	rm -f /tmp/lecture-utilisateur-centreon-local.txt
+	rm -f $fichtemp
+
+
+	grep "hostCentreon" etc/centreon/centreon.conf.php > $fichtemp
+	sed -n 's/.* =\ \(.*\);.*/\1/ip' $fichtemp > /tmp/lecture-serveur-centreon-distant.txt 
+	sed -i 's/\"//g' /tmp/lecture-serveur-centreon-distant.txt
+	lecture_serveur_centreon_distant=`cat /tmp/lecture-serveur-centreon-distant.txt`
+	rm -f /tmp/lecture-serveur-centreon-distant.txt
+	rm -f $fichtemp
+
+	grep "user" etc/centreon/centreon.conf.php > $fichtemp
+	sed -n 's/.* =\ \(.*\);.*/\1/ip' $fichtemp > /tmp/lecture-utilisateur-centreon-distant.txt 
+	sed -i 's/\"//g' /tmp/lecture-utilisateur-centreon-distant.txt
+	lecture_utilisateur_centreon_distant=`cat /tmp/lecture-utilisateur-centreon-distant.txt`
+	rm -f /tmp/lecture-utilisateur-centreon-distant.txt
+	rm -f $fichtemp
+
+	grep "password" etc/centreon/centreon.conf.php > $fichtemp
+	sed -n 's/.* =\ \(.*\);.*/\1/ip' $fichtemp > /tmp/lecture-password-centreon-distant.txt 
+	sed -i 's/\"//g' /tmp/lecture-password-centreon-distant.txt
+	lecture_password_centreon_distant=`cat /tmp/lecture-password-centreon-distant.txt`
+	rm -f /tmp/lecture-password-centreon-distant.txt
+	rm -f $fichtemp
+
+
+	if [ "$lecture_utilisateur_centreon_local" != "" ] ; then
+
+		cat <<- EOF > $fichtemp
+		use mysql;
+		SELECT Db FROM db WHERE User='$lecture_utilisateur_centreon_local';
+		EOF
+
+		mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp > /tmp/lecture-bases-supprimer.txt
+
+
+		sed -i '1d' /tmp/lecture-bases-supprimer.txt
+
+		lecture_bases_supprimer_no1=$(sed -n '1p' /tmp/lecture-bases-supprimer.txt)
+		lecture_bases_supprimer_no2=$(sed -n '2p' /tmp/lecture-bases-supprimer.txt)
+		lecture_bases_supprimer_no3=$(sed -n '3p' /tmp/lecture-bases-supprimer.txt)
+		rm -f /tmp/lecture-bases-supprimer.txt
+		rm -f $fichtemp
+
+
+		if [ "$lecture_bases_supprimer_no1" != "" ] ||
+	          [ "$lecture_bases_supprimer_no2" != "" ] ||
+	          [ "$lecture_bases_supprimer_no3" != "" ] ; then
+
+
+			cat <<- EOF > $fichtemp
+			DROP DATABASE IF EXISTS $lecture_bases_supprimer_no1;
+			EOF
+
+			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+			rm -f $fichtemp
+
+
+			cat <<- EOF > $fichtemp
+			DROP DATABASE IF EXISTS $lecture_bases_supprimer_no2;
+			EOF
+
+			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+			rm -f $fichtemp
+
+
+			cat <<- EOF > $fichtemp
+			DROP DATABASE IF EXISTS $lecture_bases_supprimer_no3;
+			EOF
+
+			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+			rm -f $fichtemp
+
+
+			cat <<- EOF > $fichtemp
+			REVOKE ALL PRIVILEGES ON $lecture_bases_supprimer_no1 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
+			REVOKE GRANT OPTION ON $lecture_bases_supprimer_no1 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
+			EOF
+
+			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+			rm -f $fichtemp
+
+
+			cat <<- EOF > $fichtemp
+			REVOKE ALL PRIVILEGES ON $lecture_bases_supprimer_no2 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
+			REVOKE GRANT OPTION ON $lecture_bases_supprimer_no2 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
+			EOF
+
+			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+			rm -f $fichtemp
+
+
+			cat <<- EOF > $fichtemp
+			REVOKE ALL PRIVILEGES ON $lecture_bases_supprimer_no3 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
+			REVOKE GRANT OPTION ON $lecture_bases_supprimer_no3 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
+			EOF
+
+			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+			rm -f $fichtemp
+
+		else
+			rm -rf etc/
+			rm -rf usr/
+			rm -rf var/
+			rm -rf dump-mysql/
+			rm -rf plateforme/
+			message_erreur_centreon
+			menu
+		fi
+
+
+		cat <<- EOF > $fichtemp
+		DROP USER '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
+		EOF
+
+		mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+
+		rm -f $fichtemp
+
+
+	else
+		rm -rf etc/
+		rm -rf usr/
+		rm -rf var/
+		rm -rf dump-mysql/
+		rm -rf plateforme/
+		message_erreur_centreon
+		menu
+	fi
+
+ echo "50" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 	if [ -f $NagiosLockFile ] ; then
@@ -878,7 +1132,7 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 	/etc/init.d/centstorage stop &> /dev/null
 	fi
 
- echo "50" ; sleep 1
+ echo "60" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 	
 	rm -rf /etc/centreon/
@@ -910,7 +1164,7 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 	chown -R centreon:centreon  /var/lib/centreon
 	chmod -R 775 /var/lib/centreon
 
- echo "60" ; sleep 1
+ echo "70" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 
