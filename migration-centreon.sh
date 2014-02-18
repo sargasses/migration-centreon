@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 16-02-2014
+# Date : 18-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -1002,7 +1002,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 		SELECT Db FROM db WHERE User='$lecture_utilisateur_centreon_local';
 		EOF
 
-		mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp > /tmp/lecture-bases-supprimer.txt
+		mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp > /tmp/lecture-bases-supprimer.txt
 
 
 		sed -i '1d' /tmp/lecture-bases-supprimer.txt
@@ -1023,7 +1023,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			DROP DATABASE IF EXISTS $lecture_bases_supprimer_no1;
 			EOF
 
-			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+			mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 			rm -f $fichtemp
 
@@ -1032,7 +1032,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			DROP DATABASE IF EXISTS $lecture_bases_supprimer_no2;
 			EOF
 
-			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+			mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 			rm -f $fichtemp
 
@@ -1041,7 +1041,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			DROP DATABASE IF EXISTS $lecture_bases_supprimer_no3;
 			EOF
 
-			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+			mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 			rm -f $fichtemp
 
@@ -1051,7 +1051,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			REVOKE GRANT OPTION ON $lecture_bases_supprimer_no1 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
 			EOF
 
-			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+			mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 			rm -f $fichtemp
 
@@ -1061,7 +1061,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			REVOKE GRANT OPTION ON $lecture_bases_supprimer_no2 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
 			EOF
 
-			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+			mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 			rm -f $fichtemp
 
@@ -1071,7 +1071,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			REVOKE GRANT OPTION ON $lecture_bases_supprimer_no3 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
 			EOF
 
-			mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+			mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 			rm -f $fichtemp
 
@@ -1090,7 +1090,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 		DROP USER '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
 		EOF
 
-		mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+		mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 		rm -f $fichtemp
 
@@ -1168,45 +1168,45 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 
-	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < /root/dump-mysql/$VARSAISI23.sql
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < /root/dump-mysql/$VARSAISI34.sql
 	
-	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < /root/dump-mysql/$VARSAISI24.sql
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < /root/dump-mysql/$VARSAISI35.sql
 
-	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < /root/dump-mysql/$VARSAISI25.sql
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < /root/dump-mysql/$VARSAISI36.sql
 
 
 	cat <<- EOF > $fichtemp
 	CREATE USER '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' IDENTIFIED BY '$lecture_password_centreon_distant';
 	EOF
 
-	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 	rm -f $fichtemp
 
 
 	cat <<- EOF > $fichtemp
-	GRANT ALL PRIVILEGES ON $VARSAISI23 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
+	GRANT ALL PRIVILEGES ON $VARSAISI34 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
 	EOF
 
-	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 	rm -f $fichtemp
 
 
 	cat <<- EOF > $fichtemp
-	GRANT ALL PRIVILEGES ON $VARSAISI24 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
+	GRANT ALL PRIVILEGES ON $VARSAISI35 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
 	EOF
 
-	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 	rm -f $fichtemp
 
 
 	cat <<- EOF > $fichtemp
-	GRANT ALL PRIVILEGES ON $VARSAISI25 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
+	GRANT ALL PRIVILEGES ON $VARSAISI36 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
 	EOF
 
-	mysql -h `uname -n` -u $VARSAISI21 -p$VARSAISI22 < $fichtemp
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 	rm -f $fichtemp
 
