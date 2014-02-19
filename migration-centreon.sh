@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 18-02-2014
+# Date : 19-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -1076,13 +1076,24 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			rm -f $fichtemp
 
 		else
-			rm -rf etc/
-			rm -rf usr/
-			rm -rf var/
-			rm -rf dump-mysql/
-			rm -rf plateforme/
-			message_erreur_centreon
-			menu
+			if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
+				rm -rf etc/
+				rm -rf usr/
+				rm -rf var/
+				rm -rf dump-mysql/
+				rm -ft dump-rrd/
+				rm -rf plateforme/
+				message_erreur_centreon
+				menu
+			else
+				rm -rf etc/
+				rm -rf usr/
+				rm -rf var/
+				rm -rf dump-mysql/
+				rm -rf plateforme/
+				message_erreur_centreon
+				menu
+			fi
 		fi
 
 
@@ -1096,13 +1107,24 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
 
 	else
-		rm -rf etc/
-		rm -rf usr/
-		rm -rf var/
-		rm -rf dump-mysql/
-		rm -rf plateforme/
-		message_erreur_centreon
-		menu
+		if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
+			rm -rf etc/
+			rm -rf usr/
+			rm -rf var/
+			rm -rf dump-mysql/
+			rm -ft dump-rrd/
+			rm -rf plateforme/
+			message_erreur_centreon
+			menu
+		else
+			rm -rf etc/
+			rm -rf usr/
+			rm -rf var/
+			rm -rf dump-mysql/
+			rm -rf plateforme/
+			message_erreur_centreon
+			menu
+		fi
 	fi
 
  echo "50" ; sleep 1
@@ -1150,7 +1172,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
 	cp -Rp etc/centreon/ /etc/
 	cp -Rp usr/local/centreon/www/img/media/ /usr/local/centreon/www/img/
-	cp -Rp var/lib/centreon/ /var/lib/
+
 
 	if [ -d usr/local/nagios/libexec ] ; then
 	cp -Rp usr/local/nagios/libexec/ /usr/local/nagios/ 
@@ -1160,11 +1182,35 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 	cp -Rp usr/local/centreon-plugins/libexec/ /usr/local/centreon-plugins/
 	fi
 
+ echo "70" ; sleep 1
+ echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
+
+
+	if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
+		
+		mkdir -p /var/lib/centreon/
+		mkdir -p /var/lib/centreon/metrics
+		mkdir -p /var/lib/centreon/nagios-perf
+		mkdir -p /var/lib/centreon/nagios-perf/perfmon-1
+		mkdir -p /var/lib/centreon/status
+
+		cd /root/dump-rrd/metrics
+		for i in `find -name "*.xml"`; do rrdtool restore $i `echo /var/lib/centreon/metrics/$i |sed s/.xml//g`; done
+
+		cd /root/dump-rrd/nagios-perf/perfmon-1
+		for i in `find -name "*.xml"`; do rrdtool restore $i `echo /var/lib/centreon/nagios-perf/perfmon-1/$i |sed s/.xml//g`; done
+		
+		cd /root/dump-rrd/status
+		for i in `find -name "*.xml"`; do rrdtool restore $i `echo /var/lib/centreon/status/$i |sed s/.xml//g`; done
+
+	else
+		cp -Rp var/lib/centreon/ /var/lib/
+	fi
 
 	chown -R centreon:centreon  /var/lib/centreon
 	chmod -R 775 /var/lib/centreon
 
- echo "70" ; sleep 1
+ echo "80" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 
@@ -1210,16 +1256,27 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
 	rm -f $fichtemp
 
- echo "80" ; sleep 1
+ echo "90" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
-	rm -rf etc/
-	rm -rf usr/
-	rm -rf var/
-	rm -rf dump-mysql/
-	rm -rf plateforme/
+	if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
+		rm -rf etc/
+		rm -rf usr/
+		rm -rf var/
+		rm -rf dump-mysql/
+		rm -ft dump-rrd/
+		rm -rf plateforme/
+	else
+		rm -rf etc/
+		rm -rf usr/
+		rm -rf var/
+		rm -rf dump-mysql/
+		rm -rf plateforme/
+	fi
 
- echo "90" ; sleep 1
+	rm -rf migration-centreon.tgz
+
+ echo "95" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
 	if [ -f /usr/local/nagios/bin/nagios ] ; then
