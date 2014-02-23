@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 19-02-2014
+# Date : 23-02-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -795,7 +795,7 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 $DIALOG --backtitle "Configuration Migration Centreon" \
 	 --colors \
 	 --title "Confirmation Migration Centreon" \
-	 --menu "Quel est votre choix" 7 60 0 \
+	 --menu "Quel est votre choix" 7 66 0 \
 	 "Utilisateur de la Base Local:"   "\Z2$REF20\Zn" \
 	 "Password de la Base Local:"      "\Z2$REF21\Zn" \
 	 "Utilisateur de la Base Distant:" "\Z2$REF22\Zn" \
@@ -924,14 +924,14 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
  echo "20" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
-
 	sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p  migration.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
+
+	rm -f migration.sh	
+
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 migration.sh" &> /dev/null
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./migration.sh" &> /dev/null
 	sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/root/migration-centreon.tgz /root/ &> /dev/null
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration.sh ; rm -f /root/migration-centreon.tgz" &> /dev/null
-
-	rm -f migration.sh
 
 ) |
 $DIALOG --backtitle "Configuration Migration Centreon" \
@@ -1081,7 +1081,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 				rm -rf usr/
 				rm -rf var/
 				rm -rf dump-mysql/
-				rm -ft dump-rrd/
+				rm -rf dump-rrd/
 				rm -rf plateforme/
 				message_erreur_centreon
 				menu
@@ -1112,7 +1112,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			rm -rf usr/
 			rm -rf var/
 			rm -rf dump-mysql/
-			rm -ft dump-rrd/
+			rm -rf dump-rrd/
 			rm -rf plateforme/
 			message_erreur_centreon
 			menu
@@ -1161,25 +1161,17 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 	rm -rf /usr/local/centreon/www/img/media/
 	rm -rf /var/lib/centreon/
 
-	if [ -d /usr/local/nagios/libexec ] ; then
-	rm -rf /usr/local/nagios/libexec/
-	fi
-
-	if [ -d /usr/local/centreon-plugins/libexec ] ; then
-	rm -rf /usr/local/centreon-plugins/libexec/
-	fi
-
 
 	cp -Rp etc/centreon/ /etc/
 	cp -Rp usr/local/centreon/www/img/media/ /usr/local/centreon/www/img/
 
 
 	if [ -d usr/local/nagios/libexec ] ; then
-	cp -Rp usr/local/nagios/libexec/ /usr/local/nagios/ 
+	cp -Rpn usr/local/nagios/libexec/ /usr/local/nagios/ 
 	fi
 
 	if [ -d usr/local/centreon-plugins/libexec ] ; then
-	cp -Rp usr/local/centreon-plugins/libexec/ /usr/local/centreon-plugins/
+	cp -Rpn usr/local/centreon-plugins/libexec/ /usr/local/centreon-plugins/
 	fi
 
  echo "70" ; sleep 1
@@ -1189,6 +1181,9 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 	if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
 		
 		mkdir -p /var/lib/centreon/
+		mkdir -p /var/lib/centreon/centplugins
+		mkdir -p /var/lib/centreon/log
+		mkdir -p /var/lib/centreon/log/1
 		mkdir -p /var/lib/centreon/metrics
 		mkdir -p /var/lib/centreon/nagios-perf
 		mkdir -p /var/lib/centreon/nagios-perf/perfmon-1
@@ -1202,6 +1197,8 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 		
 		cd /root/dump-rrd/status
 		for i in `find -name "*.xml"`; do rrdtool restore $i `echo /var/lib/centreon/status/$i |sed s/.xml//g`; done
+
+		cd ../..
 
 	else
 		cp -Rp var/lib/centreon/ /var/lib/
@@ -1264,7 +1261,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 		rm -rf usr/
 		rm -rf var/
 		rm -rf dump-mysql/
-		rm -ft dump-rrd/
+		rm -rf dump-rrd/
 		rm -rf plateforme/
 	else
 		rm -rf etc/
