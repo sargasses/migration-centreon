@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 23-02-2014
+# Date : 28-03-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -67,6 +67,21 @@ if [ -d /lib64 ] ; then
 	PLATEFORME_LOCAL=64
 else
 	PLATEFORME_LOCAL=32
+fi
+
+
+#############################################################################
+# Fonction Verification Engine
+#############################################################################
+
+
+fichtemp=\`tempfile 2>/dev/null\` || fichtemp=/tmp/test\$$
+
+if [ -f /etc/centreon/instCentWeb.conf ] ; then
+	grep "^MONITORINGENGINE_ETC=" /etc/centreon/instCentWeb.conf  > $fichtemp
+	sed -i "s/MONITORINGENGINE_ETC=//g" $fichtemp
+	ENGINE_LOCAL=`cat $fichtemp` 
+	rm -f $fichtemp
 fi
 
 
@@ -211,14 +226,14 @@ from sauvegarde_bases
 where uname='$choix_serveur' and application='centreon' ;
 EOF
 
-mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-bases-sauvegarder.txt
+mysql -h $VAR10 -P $VAR11 -u $VAR13 -p$VAR14 $VAR12 < $fichtemp >/tmp/lecture-bases-distant.txt
 
-sed -i '1d' /tmp/lecture-bases-sauvegarder.txt
+sed -i '1d' /tmp/lecture-bases-distant.txt
 
-lecture_bases_no1=$(sed -n '1p' /tmp/lecture-bases-sauvegarder.txt)
-lecture_bases_no2=$(sed -n '2p' /tmp/lecture-bases-sauvegarder.txt)
-lecture_bases_no3=$(sed -n '3p' /tmp/lecture-bases-sauvegarder.txt)
-rm -f /tmp/lecture-bases-sauvegarder.txt
+lecture_bases_distant_no1=$(sed -n '1p' /tmp/lecture-bases-distant.txt)
+lecture_bases_distant_no2=$(sed -n '2p' /tmp/lecture-bases-distant.txt)
+lecture_bases_distant_no3=$(sed -n '3p' /tmp/lecture-bases-distant.txt)
+rm -f /tmp/lecture-bases-distant.txt
 rm -f $fichtemp
 
 
@@ -226,9 +241,9 @@ REF20=$lecture_user_local
 REF21=$lecture_password_local
 REF22=$lecture_user_distant
 REF23=$lecture_password_distant
-REF24=$lecture_bases_no1
-REF25=$lecture_bases_no2
-REF26=$lecture_bases_no3
+REF24=$lecture_bases_distant_no1
+REF25=$lecture_bases_distant_no2
+REF26=$lecture_bases_distant_no3
 
 }
 
@@ -354,6 +369,30 @@ rm -f /tmp/erreur
 }
 
 #############################################################################
+# Fonction Message d'erreur version centreon
+#############################################################################
+
+message_erreur_version_centreon()
+{
+	
+cat <<- EOF > /tmp/erreur
+Veuillez vous assurer que les versions de centreon
+       soit identique sur les deux serveurs
+EOF
+
+erreur=`cat /tmp/erreur`
+
+$DIALOG --ok-label "Quitter" \
+	 --colors \
+	 --backtitle "Configuration Migration Centreon" \
+	 --title "Erreur" \
+	 --msgbox  "\Z1$erreur\Zn" 6 54 
+
+rm -f /tmp/erreur
+
+}
+
+#############################################################################
 # Fonction Message d'erreur fichier
 #############################################################################
 
@@ -448,9 +487,7 @@ case $valret in
 	then
 		clear
 	fi
-
 	;;
-
 
  1)	# Appuyé sur Touche CTRL C
 	echo "Appuyé sur Touche CTRL C."
@@ -465,7 +502,6 @@ esac
 rm -f $fichtemp
 
 exit
-
 }
 
 #############################################################################
@@ -541,7 +577,6 @@ esac
 rm -f $fichtemp
 
 menu
-
 }
 
 #############################################################################
@@ -557,7 +592,7 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 $DIALOG --backtitle "Configuration Migration Centreon" \
 	 --title "Configuration Migration Centreon" \
 	 --form "Quel est votre choix" 9 60 1 \
-	 "Migration Serveur:"  1 1  "`uname -n`" 1 20 34 18 2> $fichtemp
+	 "Migration Serveur:"  1 1  "`uname -n`" 1 20 34 33 2> $fichtemp
 
 
 valret=$?
@@ -624,7 +659,6 @@ esac
 rm -f $fichtemp
 
 menu
-
 }
 
 #############################################################################
@@ -678,7 +712,7 @@ case $valret in
 		if grep -w "$choix_serveur" /tmp/hostname > /dev/null ; then
 			rm -f /tmp/hostname
 			rm -f $fichtemp
-			fonction_verification_plateforme_serveur_distant
+			fonction_verification_version_centreon
 		else
 			rm -f /tmp/hostname
 			rm -f $fichtemp
@@ -707,6 +741,84 @@ esac
 rm -f $fichtemp
 
 menu
+}
+
+#############################################################################
+# Fonction Verification Version Centreon Serveur Local & Distant
+#############################################################################
+
+fonction_verification_version_centreon()
+{
+
+fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
+
+if [ -f /etc/centreon/centreon.conf.php ] ; then
+	grep -w "db" /etc/centreon/centreon.conf.php > $fichtemp
+	sed -n 's/.* =\ \(.*\);.*/\1/ip' $fichtemp > /tmp/lecture-base-centreon-local.txt 
+	sed -i 's/\"//g' /tmp/lecture-base-centreon-local.txt
+	base_centreon_local=`cat /tmp/lecture-base-centreon-local.txt`
+	rm -f /tmp/lecture-base-centreon-local.txt
+	rm -f $fichtemp
+else
+	message_erreur_centreon
+	menu
+fi
+
+
+cat <<- EOF > $fichtemp
+select value
+from informations ;
+EOF
+
+mysql -h `uname -n` -u $REF20 -p$REF21 $base_centreon_local < $fichtemp >/tmp/version-centreon-local.txt
+
+version_centreon_local=$(sed '$!d' /tmp/version-centreon-local.txt)
+rm -f /tmp/version-centreon-local.txt
+rm -f $fichtemp
+
+
+
+cat <<- EOF > version-centreon.sql
+select value
+from informations ;
+EOF
+
+cat <<- EOF > version-centreon.sh
+mysql -h localhost -u $REF22 -p$REF23 $REF24 < version-centreon.sql > version-centreon.txt
+sed -i '1d' version-centreon.txt 
+EOF
+
+
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 version-centreon.sql $VARSAISI22@$VARSAISI20:/root &> /dev/null
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 version-centreon.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 version-centreon.sql" &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 version-centreon.sh" &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./version-centreon.sh" &> /dev/null
+sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/root/version-centreon.txt /root/ &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/version-centreon.sql" &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/version-centreon.sh" &> /dev/null
+sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/version-centreon.txt" &> /dev/null
+
+
+VERSION_CENTREON_LOCAL=$version_centreon_local
+VERSION_CENTREON_DISTANT=`cat version-centreon.txt`
+
+
+rm -f version-centreon.sql
+rm -f version-centreon.sh
+rm -f version-centreon.txt
+
+
+echo "Version Centreon local: $VERSION_CENTREON_LOCAL"
+echo "Version Centreon distant: $VERSION_CENTREON_DISTANT"
+
+
+if [ "$VERSION_CENTREON_LOCAL" != "$VERSION_CENTREON_DISTANT" ] ; then
+	message_erreur_version_centreon
+	menu
+else
+	fonction_verification_plateforme_serveur_distant
+fi
 
 }
 
@@ -738,10 +850,12 @@ PLATEFORME_DISTANT=`cat plateforme-distant.txt`
 
 rm -f plateforme.sh
 rm -f plateforme-distant.txt
+
+
 echo "Plateforme distante: $PLATEFORME_DISTANT"		
 
-fonction_verification_engine_serveur_distant
 
+fonction_verification_engine_serveur_distant
 }
 
 #############################################################################
@@ -774,10 +888,12 @@ ENGINE_DISTANT=`cat engine-distant.txt`
 
 rm -f engine.sh
 rm -f engine-distant.txt
+
+
 echo "Engine distant: $ENGINE_DISTANT"		
 
-menu_confirmation_migration_centreon
 
+menu_confirmation_migration_centreon
 }
 
 #############################################################################
@@ -822,7 +938,6 @@ case $valret in
 	migration_serveur_centreon
 	;;
 
-
  1)	# Confirmation Migration Centreon (Non)
 	echo "Appuyé sur Touche (Non)"
 	;;
@@ -836,9 +951,7 @@ esac
 rm -f $fichtemp
 
 menu
-
 }
-
 
 #############################################################################
 # Fonction Migration Serveur Centreon
@@ -854,18 +967,16 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
  echo "10" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
+	if [ $ENGINE_LOCAL -ne $ENGINE_DISTANT ] ; then
+		echo
+	else
+		echo
+	fi
+
+
 	if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
 
-		cat <<- EOF > migration.sh
-		if [ -d /usr/local/nagios/libexec ] ; then
-		       PLUGINS=/usr/local/nagios/libexec
-		fi
-
-		if [ -d /usr/local/centreon-plugins/libexec ] ; then
-		       PLUGINS=/usr/local/centreon-plugins/libexec
-		fi
-
-		mkdir -p /root/dump-mysql/
+		cat <<- EOF > migration-rrd.sh
 		mkdir -p /root/dump-rrd/
 		mkdir -p /root/dump-rrd/metrics
 		mkdir -p /root/dump-rrd/nagios-perf
@@ -880,43 +991,16 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 		cd /var/lib/centreon/status
 		for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/status/\$i.xml; done
-
-
-		cd /root
-
-		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI34 --databases > /root/dump-mysql/$VARSAISI34.sql
-		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI35 --databases > /root/dump-mysql/$VARSAISI35.sql
-		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI36 --databases > /root/dump-mysql/$VARSAISI36.sql
-
-		tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /etc/centreon/ dump-rrd/ dump-mysql/ -P
-
-		rm -rf dump-mysql/
+		
+		tar cfvz migration-centreon.tgz dump-rrd/ -P
+		
 		rm -rf dump-rrd/
 		EOF
 
 	else
 
-		cat <<- EOF > migration.sh
-		if [ -d /usr/local/nagios/libexec ] ; then
-		       PLUGINS=/usr/local/nagios/libexec
-		fi
-
-		if [ -d /usr/local/centreon-plugins/libexec ] ; then
-		       PLUGINS=/usr/local/centreon-plugins/libexec
-		fi
-
-		mkdir -p /root/dump-mysql/
-	
-
-		cd /root
-
-		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI34 --databases > /root/dump-mysql/$VARSAISI34.sql
-		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI35 --databases > /root/dump-mysql/$VARSAISI35.sql
-		mysqldump -h \`uname -n\` -u $VARSAISI32 -p$VARSAISI33 $VARSAISI36 --databases > /root/dump-mysql/$VARSAISI36.sql
-
-		tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /var/lib/centreon/ /etc/centreon/ dump-mysql/ -P
-
-		rm -rf dump-mysql/
+		cat <<- EOF > migration-rrd.sh
+		tar cfvz migration-centreon.tgz /var/lib/centreon/ -P
 		EOF
 
 	fi
@@ -924,14 +1008,25 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
  echo "20" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
+	sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p  migration-mysql.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
+	sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p  migration-rrd.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
 	sshpass -p $VARSAISI23 scp -P $VARSAISI21 -p  migration.sh $VARSAISI22@$VARSAISI20:/root &> /dev/null
 
+	rm -f migration-mysql.sh
+	rm -f migration-rrd.sh
 	rm -f migration.sh	
 
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 migration-mysql.sh" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 migration-rrd.sh" &> /dev/null
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "chmod 755 migration.sh" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./migration-mysql.sh" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./migration-rrd.sh" &> /dev/null
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "./migration.sh" &> /dev/null
 	sshpass -p $VARSAISI23 scp -P $VARSAISI21 $VARSAISI22@$VARSAISI20:/root/migration-centreon.tgz /root/ &> /dev/null
-	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration.sh ; rm -f /root/migration-centreon.tgz" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration-mysql.sh" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration-rrd.sh" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration.sh" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration-centreon.tgz" &> /dev/null
 
 ) |
 $DIALOG --backtitle "Configuration Migration Centreon" \
@@ -1027,7 +1122,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
 			rm -f $fichtemp
 
-
 			cat <<- EOF > $fichtemp
 			DROP DATABASE IF EXISTS $lecture_bases_supprimer_no2;
 			EOF
@@ -1036,7 +1130,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
 			rm -f $fichtemp
 
-
 			cat <<- EOF > $fichtemp
 			DROP DATABASE IF EXISTS $lecture_bases_supprimer_no3;
 			EOF
@@ -1044,7 +1137,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 			rm -f $fichtemp
-
 
 			cat <<- EOF > $fichtemp
 			REVOKE ALL PRIVILEGES ON $lecture_bases_supprimer_no1 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
@@ -1055,7 +1147,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
 			rm -f $fichtemp
 
-
 			cat <<- EOF > $fichtemp
 			REVOKE ALL PRIVILEGES ON $lecture_bases_supprimer_no2 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
 			REVOKE GRANT OPTION ON $lecture_bases_supprimer_no2 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
@@ -1064,7 +1155,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 			mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 			rm -f $fichtemp
-
 
 			cat <<- EOF > $fichtemp
 			REVOKE ALL PRIVILEGES ON $lecture_bases_supprimer_no3 . * FROM '$lecture_utilisateur_centreon_local'@'$lecture_serveur_centreon_local';
@@ -1104,7 +1194,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 		mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 		rm -f $fichtemp
-
 
 	else
 		if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
@@ -1157,12 +1246,12 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
  echo "60" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 	
-	rm -rf /etc/centreon/
+	#rm -rf /etc/centreon/
 	rm -rf /usr/local/centreon/www/img/media/
 	rm -rf /var/lib/centreon/
 
 
-	cp -Rp etc/centreon/ /etc/
+	#cp -Rp etc/centreon/ /etc/
 	cp -Rp usr/local/centreon/www/img/media/ /usr/local/centreon/www/img/
 
 
@@ -1176,7 +1265,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
  echo "70" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
-
 
 	if [ $PLATEFORME_LOCAL -ne $PLATEFORME_DISTANT ] ; then
 		
@@ -1210,12 +1298,36 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
  echo "80" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
+	cat <<- EOF > $fichtemp
+	CREATE DATABASE IF NOT EXISTS $VARSAISI34;
+	EOF
 
-	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < /root/dump-mysql/$VARSAISI34.sql
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
+
+	rm -f $fichtemp
+
+	cat <<- EOF > $fichtemp
+	CREATE DATABASE IF NOT EXISTS $VARSAISI35;
+	EOF
+
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
+
+	rm -f $fichtemp
+
+	cat <<- EOF > $fichtemp
+	CREATE DATABASE IF NOT EXISTS $VARSAISI36;
+	EOF
+
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
+
+	rm -f $fichtemp
+
+
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 $VARSAISI34 < /root/dump-mysql/$VARSAISI34.sql
 	
-	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < /root/dump-mysql/$VARSAISI35.sql
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 $VARSAISI35 < /root/dump-mysql/$VARSAISI35.sql
 
-	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < /root/dump-mysql/$VARSAISI36.sql
+	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 $VARSAISI36 < /root/dump-mysql/$VARSAISI36.sql
 
 
 	cat <<- EOF > $fichtemp
@@ -1226,7 +1338,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
 	rm -f $fichtemp
 
-
 	cat <<- EOF > $fichtemp
 	GRANT ALL PRIVILEGES ON $VARSAISI34 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
 	EOF
@@ -1235,7 +1346,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 
 	rm -f $fichtemp
 
-
 	cat <<- EOF > $fichtemp
 	GRANT ALL PRIVILEGES ON $VARSAISI35 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
 	EOF
@@ -1243,7 +1353,6 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 	mysql -h `uname -n` -u $VARSAISI30 -p$VARSAISI31 < $fichtemp
 
 	rm -f $fichtemp
-
 
 	cat <<- EOF > $fichtemp
 	GRANT ALL PRIVILEGES ON $VARSAISI36 . * TO '$lecture_utilisateur_centreon_distant'@'$lecture_serveur_centreon_distant' WITH GRANT OPTION;
@@ -1271,7 +1380,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 		rm -rf plateforme/
 	fi
 
-	rm -rf migration-centreon.tgz
+	#rm -rf migration-centreon.tgz
 
  echo "95" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
