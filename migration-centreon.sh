@@ -2,7 +2,7 @@
 #
 # Copyright 2013-2014 
 # Développé par : Stéphane HACQUARD
-# Date : 28-03-2014
+# Date : 17-04-2014
 # Version 1.0
 # Pour plus de renseignements : stephane.hacquard@sargasses.fr
 
@@ -967,10 +967,39 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
  echo "10" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
 
-	if [ $ENGINE_LOCAL -ne $ENGINE_DISTANT ] ; then
-		echo
+
+	if [ "$ENGINE_LOCAL" != "$ENGINE_DISTANT" ] ; then
+
+		cat <<- EOF > migration-mysql.sh
+		mkdir -p /root/dump-mysql
+		
+		mysqldump -h localhost -u $VARSAISI32 -p$VARSAISI33 $VARSAISI34 \\
+			--ignore-table=centreon.cfg_centreonbroker \\
+			--ignore-table=centreon.cfg_centreonbroker_info \\
+			--ignore-table=centreon.cfg_cgi \\
+			--ignore-table=centreon.cfg_nagios \\
+			--ignore-table=centreon.cfg_nagios_broker_module \\
+			--ignore-table=centreon.cfg_ndo2db \\
+			--ignore-table=centreon.cfg_ndomod \\
+			--ignore-table=centreon.cfg_resource \\
+			--ignore-table=centreon.connector \\
+			--ignore-table=centreon.nagios_server \\
+			--ignore-table=centreon.options > /root/dump-mysql/$VARSAISI34.sql
+
+		mysqldump -h localhost -u $VARSAISI32 -p$VARSAISI33 $VARSAISI35 > /root/dump-mysql/$VARSAISI35.sql
+		mysqldump -h localhost -u $VARSAISI32 -p$VARSAISI33 $VARSAISI36 > /root/dump-mysql/$VARSAISI36.sql
+		EOF
+
 	else
-		echo
+
+		cat <<- EOF > migration-mysql.sh
+		mkdir -p /root/dump-mysql
+
+		mysqldump -h localhost -u $VARSAISI32 -p$VARSAISI33 $VARSAISI34 --databases > /root/dump-mysql/$VARSAISI34.sql
+		mysqldump -h localhost -u $VARSAISI32 -p$VARSAISI33 $VARSAISI35 --databases > /root/dump-mysql/$VARSAISI35.sql
+		mysqldump -h localhost -u $VARSAISI32 -p$VARSAISI33 $VARSAISI36 --databases > /root/dump-mysql/$VARSAISI36.sql
+		EOF
+
 	fi
 
 
@@ -991,19 +1020,29 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 
 		cd /var/lib/centreon/status
 		for i in \`find -name "*.rrd"\`; do rrdtool dump \$i > /root/dump-rrd/status/\$i.xml; done
-		
-		tar cfvz migration-centreon.tgz dump-rrd/ -P
-		
-		rm -rf dump-rrd/
-		EOF
-
-	else
-
-		cat <<- EOF > migration-rrd.sh
-		tar cfvz migration-centreon.tgz /var/lib/centreon/ -P
 		EOF
 
 	fi
+
+
+	cat <<- EOF > migration.sh
+	if [ -d /usr/local/nagios/libexec ] ; then
+		PLUGINS=/usr/local/nagios/libexec
+	fi
+
+	if [ -d /usr/local/centreon-plugins/libexec ] ; then
+		PLUGINS=/usr/local/centreon-plugins/libexec
+	fi
+
+
+	if [ -d /root/dump-rrd ] ; then
+		tar cfvz migration-centreon.tgz \$PLUGINS/ /usr/local/centreon/www/img/media/ /etc/centreon/ dump-rrd/ dump-mysql/ -P
+	else
+		tar cfvz migration-centreon.tgz \$PLUGINS/ /var/lib/centreon/ /usr/local/centreon/www/img/media/ /etc/centreon/ dump-mysql/ -P
+	fi
+
+	EOF
+
 
  echo "20" ; sleep 1
  echo "XXX" ; echo "Migration en cours veuillez patienter"; echo "XXX"
@@ -1026,6 +1065,8 @@ fichtemp=`tempfile 2>/dev/null` || fichtemp=/tmp/test$$
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration-mysql.sh" &> /dev/null
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration-rrd.sh" &> /dev/null
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration.sh" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/dump-mysql/" &> /dev/null
+	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/dump-rrd/" &> /dev/null
 	sshpass -p $VARSAISI23 ssh -o StrictHostKeyChecking=no -p $VARSAISI21 $VARSAISI22@$VARSAISI20 "rm -f /root/migration-centreon.tgz" &> /dev/null
 
 ) |
@@ -1044,6 +1085,7 @@ $DIALOG --backtitle "Configuration Migration Centreon" \
 	
 	if [ -f migration-centreon.tgz ] ; then
 		tar xvzf migration-centreon.tgz &> /dev/null
+		menu
 	else
 		message_erreur_fichier
 		menu
